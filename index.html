@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Motivational Alarm</title>
+  <link rel="manifest" href="manifest.json">
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js')
+        .then(() => console.log("Service Worker Registered"))
+        .catch(err => console.error("SW Error", err));
+    }
+  </script>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 20px; }
+    #alarmScreen {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw; height: 100vh;
+      background: black; color: white;
+      z-index: 9999;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+    }
+    #mathSection, #finalMsg { display: none; }
+    input, select, button { margin: 10px; padding: 10px; font-size: 16px; }
+  </style>
+</head>
+<body>
+
+  <h2>Set Alarm</h2>
+  <input type="number" id="hour" placeholder="Hour" min="1" max="12">
+  <input type="number" id="minute" placeholder="Minute" min="0" max="59">
+  <select id="ampm">
+    <option value="AM">AM</option>
+    <option value="PM">PM</option>
+  </select>
+  <br>
+  <label>Select Ringtone:
+    <input type="file" id="ringtone" accept="audio/*">
+  </label>
+  <br>
+  <button onclick="setAlarm()">Set Alarm</button>
+
+  <div id="alarmScreen">
+    <h2>ALARM RINGING</h2>
+    <audio id="alarmSound" loop></audio>
+
+    <div id="challenge">
+      <p>Enter your name or ID:</p>
+      <input id="userInput" type="text">
+      <button onclick="startChallenge()">Consistency, 30 days</button>
+    </div>
+
+    <div id="mathSection">
+      <p id="questionText"></p>
+      <input id="answerInput" type="number">
+      <button onclick="checkAnswer()">Submit</button>
+    </div>
+
+    <div id="finalMsg">
+      <h2>Another guy right now is training... Won't you also?</h2>
+    </div>
+  </div>
+
+  <script>
+    let alarmTime = null;
+    let alarmInterval = null;
+    let questions = [];
+    let currentQ = 0;
+    let audioFile = null;
+
+    function setAlarm() {
+      let hr = parseInt(document.getElementById('hour').value);
+      let min = parseInt(document.getElementById('minute').value);
+      let ampm = document.getElementById('ampm').value;
+
+      if (ampm === "PM" && hr < 12) hr += 12;
+      if (ampm === "AM" && hr === 12) hr = 0;
+
+      const now = new Date();
+      alarmTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), hr, min, 0);
+
+      const file = document.getElementById('ringtone').files[0];
+      if (file) {
+        const url = URL.createObjectURL(file);
+        document.getElementById('alarmSound').src = url;
+        audioFile = url;
+      }
+
+      alert("Alarm set for: " + alarmTime.toLocaleTimeString());
+      alarmInterval = setInterval(checkAlarm, 1000);
+    }
+
+    function checkAlarm() {
+      const now = new Date();
+      if (now >= alarmTime) {
+        clearInterval(alarmInterval);
+        triggerAlarm();
+      }
+    }
+
+    function triggerAlarm() {
+      document.getElementById('alarmScreen').style.display = 'flex';
+      document.getElementById('alarmSound').play();
+    }
+
+    function startChallenge() {
+      document.getElementById('challenge').style.display = 'none';
+      document.getElementById('mathSection').style.display = 'block';
+      generateQuestions();
+      showQuestion();
+    }
+
+    function generateQuestions() {
+      let ops = ['+', '-', '*'];
+      for (let i = 0; i < 2; i++) {
+        let a = Math.floor(Math.random() * 10 + 1);
+        let b = Math.floor(Math.random() * 10 + 1);
+        let op = ops[Math.floor(Math.random() * ops.length)];
+        let answer = eval(`${a}${op}${b}`);
+        questions.push({ q: `${a} ${op} ${b}`, a: answer });
+      }
+    }
+
+    function showQuestion() {
+      if (currentQ < questions.length) {
+        document.getElementById('questionText').textContent = questions[currentQ].q;
+        document.getElementById('answerInput').value = '';
+      }
+    }
+
+    function checkAnswer() {
+      let userAnswer = parseInt(document.getElementById('answerInput').value);
+      if (userAnswer === questions[currentQ].a) {
+        currentQ++;
+        if (currentQ === questions.length) {
+          document.getElementById('mathSection').style.display = 'none';
+          document.getElementById('finalMsg').style.display = 'block';
+          document.getElementById('alarmSound').pause();
+        } else {
+          showQuestion();
+        }
+      } else {
+        alert("Wrong answer! Try again.");
+      }
+    }
+  </script>
+</body>
+</html>
